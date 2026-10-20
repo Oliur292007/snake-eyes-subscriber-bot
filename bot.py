@@ -26,13 +26,20 @@ STATE_FILE = Path("data/state.json")
 # ==========================================
 
 def load_state():
-    STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
+    STATE_FILE.parent.mkdir(
+        parents=True,
+        exist_ok=True
+    )
 
     if not STATE_FILE.exists():
         return None
 
     try:
-        with open(STATE_FILE, "r", encoding="utf-8") as file:
+        with open(
+            STATE_FILE,
+            "r",
+            encoding="utf-8"
+        ) as file:
             return json.load(file)
 
     except Exception:
@@ -40,10 +47,21 @@ def load_state():
 
 
 def save_state(state):
-    STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
+    STATE_FILE.parent.mkdir(
+        parents=True,
+        exist_ok=True
+    )
 
-    with open(STATE_FILE, "w", encoding="utf-8") as file:
-        json.dump(state, file, indent=2)
+    with open(
+        STATE_FILE,
+        "w",
+        encoding="utf-8"
+    ) as file:
+        json.dump(
+            state,
+            file,
+            indent=2
+        )
 
 
 # ==========================================
@@ -51,12 +69,16 @@ def save_state(state):
 # ==========================================
 
 def get_subscriber_count():
-    url = "https://www.googleapis.com/youtube/v3/channels"
+
+    url = (
+        "https://www.googleapis.com/"
+        "youtube/v3/channels"
+    )
 
     params = {
         "part": "statistics",
         "id": CHANNEL_ID,
-        "key": YOUTUBE_API_KEY,
+        "key": YOUTUBE_API_KEY
     }
 
     response = requests.get(
@@ -76,23 +98,27 @@ def get_subscriber_count():
 
     statistics = data["items"][0]["statistics"]
 
-    return int(statistics["subscriberCount"])
+    return int(
+        statistics["subscriberCount"]
+    )
 
 
 # ==========================================
-# NEXT 10-MULTIPLE
+# NEXT MILESTONE
 # ==========================================
 
 def get_next_milestone(subscribers):
+
     return (
         math.ceil(
-            subscribers / MILESTONE_STEP
+            subscribers /
+            MILESTONE_STEP
         ) * MILESTONE_STEP
     )
 
 
 # ==========================================
-# DISCORD ANNOUNCEMENT
+# DISCORD
 # ==========================================
 
 def send_discord_announcement(
@@ -100,16 +126,27 @@ def send_discord_announcement(
     next_goal,
     image_path
 ):
+
     message = (
         "🎉 **CONGRATULATIONS!** 🎉\n\n"
+
         f"🐍 **Snake Eyes YT** has reached "
         f"**{milestone:,} Subscribers!**\n\n"
+
         "❤️ Thank you for your amazing support!\n"
-        f"🚀 **Next Goal: {next_goal:,} Subscribers!**\n\n"
-        "🔗 https://www.youtube.com/@snake_eyes_98538"
+
+        f"🚀 **Next Goal: "
+        f"{next_goal:,} Subscribers!**\n\n"
+
+        "🔗 "
+        "https://www.youtube.com/"
+        "@snake_eyes_98538"
     )
 
-    with open(image_path, "rb") as image_file:
+    with open(
+        image_path,
+        "rb"
+    ) as image_file:
 
         files = {
             "file": (
@@ -120,8 +157,11 @@ def send_discord_announcement(
         }
 
         payload = {
-            "username": "Snake Eyes Subscriber Bot",
-            "content": message
+            "username":
+                "Snake Eyes Subscriber Bot",
+
+            "content":
+                message
         }
 
         response = requests.post(
@@ -131,7 +171,10 @@ def send_discord_announcement(
             timeout=60
         )
 
-    if response.status_code not in (200, 204):
+    if response.status_code not in (
+        200,
+        204
+    ):
         raise RuntimeError(
             "Discord webhook failed: "
             f"{response.status_code} "
@@ -150,7 +193,7 @@ def main():
     print("=" * 50)
 
     # --------------------------------------
-    # Get current subscribers
+    # Current subscribers
     # --------------------------------------
 
     subscribers = get_subscriber_count()
@@ -178,13 +221,15 @@ def main():
 
         state = {
             "last_announced_milestone": 0,
-            "next_milestone": next_milestone
+
+            "next_milestone":
+                next_milestone
         }
 
         save_state(state)
 
         print(
-            f"First run detected."
+            "First run detected."
         )
 
         print(
@@ -199,7 +244,7 @@ def main():
         return
 
     # --------------------------------------
-    # Current target
+    # Existing state
     # --------------------------------------
 
     next_milestone = int(
@@ -221,10 +266,24 @@ def main():
     )
 
     # --------------------------------------
-    # Milestone not reached
+    # Find every milestone reached
     # --------------------------------------
 
-    if subscribers < next_milestone:
+    milestones_to_announce = []
+
+    while subscribers >= next_milestone:
+
+        milestones_to_announce.append(
+            next_milestone
+        )
+
+        next_milestone += MILESTONE_STEP
+
+    # --------------------------------------
+    # Nothing new
+    # --------------------------------------
+
+    if not milestones_to_announce:
 
         print(
             "No new milestone."
@@ -233,59 +292,68 @@ def main():
         return
 
     # --------------------------------------
-    # Milestone reached
+    # Announce each missed/reached milestone
     # --------------------------------------
 
-    print(
-        f"🎉 Milestone reached: "
-        f"{next_milestone:,}"
-    )
+    for milestone in milestones_to_announce:
 
-    # Generate premium image
+        next_goal = (
+            milestone +
+            MILESTONE_STEP
+        )
 
-    upcoming_goal = (
-        next_milestone + MILESTONE_STEP
-    )
+        print(
+            f"🎉 Announcing milestone: "
+            f"{milestone:,}"
+        )
 
-    image_path = generate_milestone_image(
-        milestone=next_milestone,
-        next_goal=upcoming_goal
-    )
+        # Generate premium image
 
-    print(
-        f"Image generated: "
-        f"{image_path}"
-    )
+        image_path = (
+            generate_milestone_image(
+                milestone=milestone,
+                next_goal=next_goal
+            )
+        )
 
-    # Send Discord announcement
+        print(
+            f"Image generated: "
+            f"{image_path}"
+        )
 
-    send_discord_announcement(
-        milestone=next_milestone,
-        next_goal=upcoming_goal,
-        image_path=image_path
-    )
+        # Send Discord message
 
-    print(
-        "✅ Discord announcement sent."
-    )
+        send_discord_announcement(
+            milestone=milestone,
+            next_goal=next_goal,
+            image_path=image_path
+        )
+
+        print(
+            f"✅ {milestone:,} announcement sent."
+        )
+
+        # Update last announced milestone
+
+        state[
+            "last_announced_milestone"
+        ] = milestone
+
+        save_state(state)
 
     # --------------------------------------
-    # Update state
+    # Save next target
     # --------------------------------------
 
-    state["last_announced_milestone"] = (
-        next_milestone
-    )
-
-    state["next_milestone"] = (
-        upcoming_goal
-    )
+    state[
+        "next_milestone"
+    ] = next_milestone
 
     save_state(state)
 
     print(
         f"Next target: "
-        f"{upcoming_goal:,}"
+        f"{next_milestone:,}"
     )
 
     print(
