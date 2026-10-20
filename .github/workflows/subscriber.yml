@@ -1,1 +1,73 @@
 
+name: Snake Eyes Subscriber Bot
+
+on:
+  workflow_dispatch:
+
+  schedule:
+    - cron: "*/30 * * * *"
+
+permissions:
+  contents: write
+
+jobs:
+  subscriber-check:
+    runs-on: ubuntu-latest
+
+    steps:
+
+      # ======================================
+      # Checkout repository
+      # ======================================
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # ======================================
+      # Setup Python
+      # ======================================
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # ======================================
+      # Install dependencies
+      # ======================================
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # ======================================
+      # Run subscriber bot
+      # ======================================
+
+      - name: Run subscriber bot
+        env:
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          python bot.py
+
+      # ======================================
+      # Save updated state
+      # ======================================
+
+      - name: Commit updated state
+        run: |
+          git config user.name "Snake Eyes Subscriber Bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add data/state.json
+
+          if git diff --cached --quiet; then
+            echo "No state changes."
+          else
+            git commit -m "Update subscriber milestone state"
+            git push
+          fi
