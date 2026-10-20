@@ -2,9 +2,9 @@ from PIL import Image, ImageDraw, ImageFont
 from pathlib import Path
 
 
-# ==============================
+# ==========================================
 # FILES
-# ==============================
+# ==========================================
 
 TEMPLATE = Path("assets/subscriber_template.png")
 OUTPUT_DIR = Path("generated")
@@ -12,120 +12,150 @@ OUTPUT_DIR = Path("generated")
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 
-# ==============================
+# ==========================================
 # FONT
-# ==============================
+# ==========================================
 
 FONT_PATH = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
 
 
-# ==============================
-# GENERATE MILESTONE IMAGE
-# ==============================
+# ==========================================
+# HELPER
+# ==========================================
 
-def generate_milestone_image(milestone, next_goal):
+def load_font(size):
+    try:
+        return ImageFont.truetype(
+            FONT_PATH,
+            size
+        )
+    except Exception:
+        return ImageFont.load_default()
+
+
+def centered_x(draw, text, font, image_width):
+    bbox = draw.textbbox(
+        (0, 0),
+        text,
+        font=font
+    )
+
+    text_width = bbox[2] - bbox[0]
+
+    return (image_width - text_width) // 2
+
+
+# ==========================================
+# GENERATE IMAGE
+# ==========================================
+
+def generate_milestone_image(
+    milestone,
+    next_goal
+):
     if not TEMPLATE.exists():
         raise FileNotFoundError(
             f"Template not found: {TEMPLATE}"
         )
 
-    image = Image.open(TEMPLATE).convert("RGBA")
+    image = Image.open(
+        TEMPLATE
+    ).convert("RGB")
 
     draw = ImageDraw.Draw(image)
 
     width, height = image.size
 
-    # --------------------------------
-    # Subscriber number
-    # --------------------------------
+    # ======================================
+    # MILESTONE NUMBER
+    # ======================================
 
-    subscriber_text = f"{milestone:,}"
+    milestone_text = f"{milestone:,}"
 
-    # Large dynamic subscriber number
-    font_size = int(width * 0.105)
-
-    try:
-        font = ImageFont.truetype(
-            FONT_PATH,
-            font_size
-        )
-    except Exception:
-        font = ImageFont.load_default()
-
-    bbox = draw.textbbox(
-        (0, 0),
-        subscriber_text,
-        font=font
+    # Large number
+    milestone_font = load_font(
+        int(width * 0.105)
     )
 
-    text_width = bbox[2] - bbox[0]
-    text_height = bbox[3] - bbox[1]
+    x = centered_x(
+        draw,
+        milestone_text,
+        milestone_font,
+        width
+    )
 
-    # Center position
-    x = (width - text_width) // 2
+    # Positioned above "SUBSCRIBERS"
+    y = int(height * 0.405)
 
-    # This position is intentionally around
-    # the existing "SUBSCRIBERS" section.
-    y = int(height * 0.34)
+    # Black shadow
+    draw.text(
+        (x + 5, y + 5),
+        milestone_text,
+        font=milestone_font,
+        fill=(0, 0, 0),
+        stroke_width=5,
+        stroke_fill=(0, 0, 0)
+    )
 
-    # Dark outline
-    outline_width = max(3, width // 300)
-
+    # Main white text
     draw.text(
         (x, y),
-        subscriber_text,
-        font=font,
-        fill=(255, 255, 255, 255),
-        stroke_width=outline_width,
-        stroke_fill=(0, 0, 0, 255)
+        milestone_text,
+        font=milestone_font,
+        fill=(255, 255, 255),
+        stroke_width=3,
+        stroke_fill=(120, 0, 0)
     )
 
-    # --------------------------------
-    # Next goal
-    # --------------------------------
+    # ======================================
+    # NEXT GOAL
+    # ======================================
 
-    next_text = f"NEXT GOAL: {next_goal:,}"
-
-    next_font_size = int(width * 0.035)
-
-    try:
-        next_font = ImageFont.truetype(
-            FONT_PATH,
-            next_font_size
-        )
-    except Exception:
-        next_font = ImageFont.load_default()
-
-    next_bbox = draw.textbbox(
-        (0, 0),
-        next_text,
-        font=next_font
+    next_goal_text = (
+        f"NEXT GOAL: {next_goal:,}"
     )
 
-    next_width = next_bbox[2] - next_bbox[0]
+    next_font = load_font(
+        int(width * 0.034)
+    )
 
-    next_x = (width - next_width) // 2
-    next_y = int(height * 0.82)
+    next_x = centered_x(
+        draw,
+        next_goal_text,
+        next_font,
+        width
+    )
 
+    next_y = int(height * 0.835)
+
+    # Shadow
+    draw.text(
+        (next_x + 3, next_y + 3),
+        next_goal_text,
+        font=next_font,
+        fill=(0, 0, 0)
+    )
+
+    # Red text
     draw.text(
         (next_x, next_y),
-        next_text,
+        next_goal_text,
         font=next_font,
-        fill=(255, 30, 30, 255),
-        stroke_width=max(2, width // 500),
-        stroke_fill=(0, 0, 0, 255)
+        fill=(255, 35, 35),
+        stroke_width=2,
+        stroke_fill=(0, 0, 0)
     )
 
-    # --------------------------------
-    # Save
-    # --------------------------------
+    # ======================================
+    # SAVE
+    # ======================================
 
     output_file = (
         OUTPUT_DIR /
         f"subscriber_{milestone}.png"
     )
 
-    image.convert("RGB").save(
+    image.save(
         output_file,
         "PNG",
         optimize=True
@@ -134,14 +164,17 @@ def generate_milestone_image(milestone, next_goal):
     return output_file
 
 
-# ==============================
-# TEST
-# ==============================
+# ==========================================
+# LOCAL TEST
+# ==========================================
 
 if __name__ == "__main__":
+
     output = generate_milestone_image(
         milestone=140,
         next_goal=150
     )
 
-    print(f"Generated: {output}")
+    print(
+        f"Generated: {output}"
+    )
